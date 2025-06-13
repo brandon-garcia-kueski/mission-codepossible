@@ -137,7 +137,7 @@ function generateDaySlots(
       // Solo aplicar esta validación si es el día de hoy
       const today = new Date()
       const isToday = slotStart.toDateString() === today.toDateString()
-      
+
       if (isToday && slotStart <= minimumStartTime) continue
 
       // Verificar si hay conflictos

@@ -7,7 +7,6 @@ import AttendeeInput from '@/components/AttendeeInput'
 import TimeSlotSelector from '@/components/TimeSlotSelector'
 import { Contact } from '@/hooks/useGoogleContacts'
 import { useMeetingScheduler } from '@/hooks/useMeetingScheduler'
-import ReauthorizeButton from '@/components/ReauthorizeButton'
 
 export default function SchedulePage() {
   const { data: session, status } = useSession()
@@ -88,11 +87,6 @@ export default function SchedulePage() {
     // Resetear las horas para comparar solo fechas
     const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
-
-    if (startDateOnly < todayDate) {
-      setErrorMessage('La fecha inicial no puede ser anterior a hoy.')
-      return
-    }
 
     if (endDate < startDate) {
       setErrorMessage('La fecha final no puede ser anterior a la fecha inicial.')
@@ -188,285 +182,371 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <button
-          onClick={() => step === 'form' ? router.back() : handleBackToForm()}
-          className="mb-4 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
-        >
-          ← {step === 'form' ? 'Volver' : 'Volver al formulario'}
-        </button>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          {step === 'form' && 'Programar Nueva Reunión'}
-          {step === 'slots' && 'Seleccionar Horario'}
-          {step === 'confirmation' && 'Reunión Confirmada'}
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          {step === 'form' && 'Completa el formulario para encontrar el mejor horario para tu reunión.'}
-          {step === 'slots' && 'Selecciona el horario que mejor funcione para todos los participantes.'}
-          {step === 'confirmation' && 'Tu reunión ha sido programada exitosamente.'}
-        </p>
-      </div>
-
-      {/* Mensajes de éxito y error */}
-      {successMessage && (
-        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-          <div className="flex items-center">
-            <div className="w-5 h-5 text-green-500 mr-3">✓</div>
-            <p className="text-green-800 dark:text-green-200">{successMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <div className="flex items-center">
-            <div className="w-5 h-5 text-red-500 mr-3">⚠</div>
-            <p className="text-red-800 dark:text-red-200">{errorMessage}</p>
-          </div>
-        </div>
-      )}
-
-      <ReauthorizeButton />
-
-      {/* Paso 1: Formulario */}
-      {step === 'form' && (
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Asistentes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Asistentes *
-            </label>
-            <AttendeeInput
-              attendees={formData.attendees}
-              onAttendeesChange={handleAttendeesChange}
-              placeholder="Buscar contactos de Google o escribir emails..."
-            />
-          </div>
-
-          {/* Título de la reunión */}
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Título de la reunión *
-            </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              required
-              placeholder="Ej: Reunión de planificación del proyecto"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-
-          {/* Duración de la reunión */}
-          <div>
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Duración de la reunión *
-            </label>
-            <select
-              id="duration"
-              name="duration"
-              value={formData.duration}
-              onChange={handleInputChange}
-              required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            >
-              <option value="30">30 minutos</option>
-              <option value="60">1 hora</option>
-              <option value="90">1 hora 30 minutos</option>
-              <option value="120">2 horas</option>
-              <option value="180">3 horas</option>
-            </select>
-          </div>
-
-          {/* Rango de fechas posibles */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Rango de fechas posibles *
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="startDate" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Fecha inicial
-                </label>
-                <input
-                  type="date"
-                  id="startDate"
-                  name="startDate"
-                  value={formData.dateRange.startDate}
-                  onChange={handleInputChange}
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label htmlFor="endDate" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Fecha final
-                </label>
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={formData.dateRange.endDate}
-                  onChange={handleInputChange}
-                  required
-                  min={formData.dateRange.startDate || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-pink-700 relative overflow-hidden">
+      {/* Elementos decorativos de fondo */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-500/20 to-pink-400/20"></div>
+      <div className="absolute top-20 left-10 w-72 h-72 bg-yellow-400/30 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl"></div>
+      
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="w-full px-4 py-6">
+          <div className="max-w-4xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <img
+                src="https://cdn.prod.website-files.com/642533e2943fc871d1dc670d/642d4d9f4b2a5abd56c16739_Logo.svg"
+                alt="Kueski"
+                width={120}
+                height={26}
+                className="brightness-0 invert"
+              />
+              <span className="text-white/60">|</span>
+              <span className="text-white font-medium">Meeting Scheduler</span>
             </div>
-          </div>
-
-          {/* Motivo de la reunión */}
-          <div>
-            <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Motivo de la reunión
-            </label>
-            <textarea
-              id="reason"
-              name="reason"
-              value={formData.reason}
-              onChange={handleInputChange}
-              rows={4}
-              placeholder="Describe brevemente el propósito y agenda de la reunión..."
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-vertical"
-            />
-          </div>
-
-          {/* Botón de envío */}
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={checkingAvailability}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-            >
-              {checkingAvailability ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Consultando disponibilidad...
-                </>
-              ) : (
-                '🔍 Buscar Horarios Disponibles'
-              )}
-            </button>
-          </div>
-          </form>
-        </div>
-      )}
-
-      {/* Paso 2: Selección de horarios */}
-      {step === 'slots' && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <TimeSlotSelector
-              slots={availableSlots}
-              onSlotSelect={handleSlotSelect}
-              loading={checkingAvailability}
-            />
-            
-            {selectedSlot && (
-              <div className="mt-6 flex justify-end space-x-4">
-                <button
-                  type="button"
-                  onClick={handleBackToForm}
-                  className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Volver al formulario
-                </button>
-                <button
-                  onClick={handleConfirmMeeting}
-                  disabled={loading}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creando reunión...
-                    </>
-                  ) : (
-                    '📅 Confirmar y Crear Reunión'
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Paso 3: Confirmación */}
-      {step === 'confirmation' && (
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 text-green-500">
-              ✅
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              ¡Reunión creada exitosamente!
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Se han enviado las invitaciones a todos los participantes y la reunión ha sido agregada a sus calendarios.
-            </p>
-            <div className="flex justify-center space-x-4">
+            <div className="flex items-center gap-4">
+              <span className="text-white/80 text-sm">
+                {session.user?.name || session.user?.email}
+              </span>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20"
               >
-                Ver Dashboard
-              </button>
-              <button
-                onClick={handleStartNew}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Programar Nueva Reunión
+                Dashboard
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </header>
 
-      {/* Información adicional - solo mostrar en el primer paso */}
-      {step === 'form' && (
-        <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
-          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-            ¿Cómo funciona?
-          </h3>
-          <ul className="text-blue-800 dark:text-blue-200 space-y-2">
-            <li className="flex items-start">
-              <span className="mr-2">1.</span>
-              <span>Analizamos los calendarios de todos los asistentes</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">2.</span>
-              <span>Encontramos los horarios disponibles que funcionen para todos</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">3.</span>
-              <span>Te presentamos las mejores opciones de horario</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">4.</span>
-              <span>Una vez confirmado, creamos la reunión en todos los calendarios</span>
-            </li>
-          </ul>
-          <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-800/30 rounded-md">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              <strong>Nota:</strong> Puedes programar reuniones para hoy, pero solo se mostrarán horarios con al menos 30 minutos de anticipación desde el momento actual.
-            </p>
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="mb-8">
+            <button
+              onClick={() => step === 'form' ? router.back() : handleBackToForm()}
+              className="mb-6 text-white/80 hover:text-white flex items-center gap-2 font-medium"
+            >
+              <span className="text-lg">←</span>
+              {step === 'form' ? 'Volver' : 'Volver al formulario'}
+            </button>
+            <div className="text-center mb-12">
+              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
+                {step === 'form' && (
+                  <>
+                    Programar <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">Nueva Reunión</span>
+                  </>
+                )}
+                {step === 'slots' && (
+                  <>
+                    Seleccionar <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">Horario</span>
+                  </>
+                )}
+                {step === 'confirmation' && (
+                  <>
+                    Reunión <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Confirmada</span>
+                  </>
+                )}
+              </h1>
+              <p className="text-xl text-white/80 max-w-2xl mx-auto">
+                {step === 'form' && 'Completa el formulario para encontrar el mejor horario para tu reunión.'}
+                {step === 'slots' && 'Selecciona el horario que mejor funcione para todos los participantes.'}
+                {step === 'confirmation' && 'Tu reunión ha sido programada exitosamente.'}
+              </p>
+            </div>
           </div>
+
+          {/* Mensajes de éxito y error */}
+          {successMessage && (
+            <div className="mb-8 p-6 bg-green-500/20 backdrop-blur-sm border border-green-300/30 rounded-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 bg-green-400 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg">✓</span>
+                </div>
+                <p className="text-white font-medium">{successMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mb-8 p-6 bg-red-500/20 backdrop-blur-sm border border-red-300/30 rounded-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 bg-red-400 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg">⚠</span>
+                </div>
+                <p className="text-white font-medium">{errorMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Paso 1: Formulario */}
+          {step === 'form' && (
+            <div className="bg-white/10 backdrop-blur-sm p-8 rounded-3xl border border-white/20">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Asistentes */}
+                <div>
+                  <label className="block text-lg font-semibold text-white mb-3">
+                    Asistentes *
+                  </label>
+                  <AttendeeInput
+                    attendees={formData.attendees}
+                    onAttendeesChange={handleAttendeesChange}
+                    placeholder="Buscar contactos de Google o escribir emails..."
+                  />
+                </div>
+
+                {/* Título de la reunión */}
+                <div>
+                  <label htmlFor="title" className="block text-lg font-semibold text-white mb-3">
+                    Título de la reunión *
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Ej: Reunión de planificación del proyecto"
+                    className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm"
+                  />
+                </div>
+
+                {/* Duración de la reunión */}
+                <div>
+                  <label htmlFor="duration" className="block text-lg font-semibold text-white mb-3">
+                    Duración de la reunión *
+                  </label>
+                  <select
+                    id="duration"
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white backdrop-blur-sm"
+                  >
+                    <option value="30">30 minutos</option>
+                    <option value="60">1 hora</option>
+                    <option value="90">1 hora 30 minutos</option>
+                    <option value="120">2 horas</option>
+                    <option value="180">3 horas</option>
+                  </select>
+                </div>
+
+                {/* Rango de fechas posibles */}
+                <div>
+                  <label className="block text-lg font-semibold text-white mb-3">
+                    Rango de fechas posibles *
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="startDate" className="block text-sm text-white/70 mb-2">
+                        Fecha inicial
+                      </label>
+                      <input
+                        type="date"
+                        id="startDate"
+                        name="startDate"
+                        value={formData.dateRange.startDate}
+                        onChange={handleInputChange}
+                        required
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white backdrop-blur-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="endDate" className="block text-sm text-white/70 mb-2">
+                        Fecha final
+                      </label>
+                      <input
+                        type="date"
+                        id="endDate"
+                        name="endDate"
+                        value={formData.dateRange.endDate}
+                        onChange={handleInputChange}
+                        required
+                        min={formData.dateRange.startDate || new Date().toISOString().split('T')[0]}
+                        className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white backdrop-blur-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Motivo de la reunión */}
+                <div>
+                  <label htmlFor="reason" className="block text-lg font-semibold text-white mb-3">
+                    Motivo de la reunión
+                  </label>
+                  <textarea
+                    id="reason"
+                    name="reason"
+                    value={formData.reason}
+                    onChange={handleInputChange}
+                    rows={4}
+                    placeholder="Describe brevemente el propósito y agenda de la reunión..."
+                    className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm resize-vertical"
+                  />
+                </div>
+
+                {/* Botón de envío */}
+                <div className="flex flex-col sm:flex-row justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="px-8 py-4 bg-white/10 text-white rounded-2xl hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 font-semibold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={checkingAvailability}
+                    className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-2xl hover:from-yellow-500 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                  >
+                    {checkingAvailability ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Consultando disponibilidad...
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-lg">🔍</span>
+                        Buscar Horarios Disponibles
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Paso 2: Selección de horarios */}
+          {step === 'slots' && (
+            <div className="space-y-8">
+              <div className="bg-white/10 backdrop-blur-sm p-8 rounded-3xl border border-white/20">
+                <TimeSlotSelector
+                  slots={availableSlots}
+                  onSlotSelect={handleSlotSelect}
+                  loading={checkingAvailability}
+                />
+                
+                {selectedSlot && (
+                  <div className="mt-8 flex flex-col sm:flex-row justify-end gap-4">
+                    <button
+                      type="button"
+                      onClick={handleBackToForm}
+                      className="px-8 py-4 bg-white/10 text-white rounded-2xl hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 font-semibold"
+                    >
+                      Volver al formulario
+                    </button>
+                    <button
+                      onClick={handleConfirmMeeting}
+                      disabled={loading}
+                      className="px-8 py-4 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-2xl hover:from-green-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          Creando reunión...
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-lg">📅</span>
+                          Confirmar y Crear Reunión
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Paso 3: Confirmación */}
+          {step === 'confirmation' && (
+            <div className="bg-white/10 backdrop-blur-sm p-12 rounded-3xl border border-white/20">
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-400 to-blue-500 rounded-3xl flex items-center justify-center">
+                  <span className="text-4xl">✅</span>
+                </div>
+                <h3 className="text-3xl font-bold text-white mb-6">
+                  ¡Reunión creada exitosamente!
+                </h3>
+                <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+                  Se han enviado las invitaciones a todos los participantes y la reunión ha sido agregada a sus calendarios.
+                </p>
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="px-8 py-4 bg-white/10 text-white rounded-2xl hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 font-semibold"
+                  >
+                    Ver Dashboard
+                  </button>
+                  <button
+                    onClick={handleStartNew}
+                    className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
+                  >
+                    Programar Nueva Reunión
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Información adicional - solo mostrar en el primer paso */}
+          {step === 'form' && (
+            <div className="mt-12 bg-white/5 backdrop-blur-sm p-8 rounded-3xl border border-white/10">
+              <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <span className="text-2xl">💡</span>
+                ¿Cómo funciona?
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                      <span className="text-white font-bold">1</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Analizamos calendarios</h4>
+                      <p className="text-white/70">Revisamos los calendarios de todos los asistentes</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                      <span className="text-white font-bold">2</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Encontramos disponibilidad</h4>
+                      <p className="text-white/70">Identificamos horarios que funcionen para todos</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                      <span className="text-white font-bold">3</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Presentamos opciones</h4>
+                      <p className="text-white/70">Te mostramos las mejores opciones de horario</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                      <span className="text-white font-bold">4</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Creamos la reunión</h4>
+                      <p className="text-white/70">Una vez confirmado, la agregamos a todos los calendarios</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-8 p-6 bg-white/10 rounded-2xl border border-white/20">
+                <p className="text-white/90 font-medium">
+                  <span className="text-yellow-400">💡 Nota:</span> Puedes programar reuniones para hoy y días futuros. Para reuniones del mismo día, solo se mostrarán horarios con al menos 30 minutos de anticipación desde el momento actual.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
