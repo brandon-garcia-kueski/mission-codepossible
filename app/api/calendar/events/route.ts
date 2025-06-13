@@ -1,38 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { google } from 'googleapis'
-import NextAuth from 'next-auth'
-import GoogleProvider from 'next-auth/providers/google'
-
-const authOptions = {
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          scope: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/contacts.readonly',
-          access_type: 'offline',
-          prompt: 'consent'
-        }
-      }
-    })
-  ],
-  callbacks: {
-    async jwt({ token, account }: { token: any, account: any }) {
-      if (account) {
-        token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token
-      }
-      return token
-    },
-    async session({ session, token }: { session: any, token: any }) {
-      session.accessToken = token.accessToken
-      session.refreshToken = token.refreshToken
-      return session
-    }
-  }
-}
+import { authOptions } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
