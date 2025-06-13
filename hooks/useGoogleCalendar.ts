@@ -1,31 +1,29 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { google } from 'googleapis'
 
 export const useGoogleCalendar = () => {
   const { data: session } = useSession()
 
   const getCalendarEvents = async (timeMin: string, timeMax: string) => {
-    if (!session?.accessToken) {
-      throw new Error('No access token available')
+    if (!session) {
+      throw new Error('No session available')
     }
 
-    const auth = new google.auth.OAuth2()
-    auth.setCredentials({ access_token: session.accessToken as string })
-
-    const calendar = google.calendar({ version: 'v3', auth })
-
     try {
-      const response = await calendar.events.list({
-        calendarId: 'primary',
-        timeMin,
-        timeMax,
-        singleEvents: true,
-        orderBy: 'startTime'
+      const response = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
-      return response.data.items || []
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to fetch calendar events')
+      }
+
+      return await response.json()
     } catch (error) {
       console.error('Error fetching calendar events:', error)
       throw error
@@ -33,22 +31,25 @@ export const useGoogleCalendar = () => {
   }
 
   const createEvent = async (eventDetails: any) => {
-    if (!session?.accessToken) {
-      throw new Error('No access token available')
+    if (!session) {
+      throw new Error('No session available')
     }
 
-    const auth = new google.auth.OAuth2()
-    auth.setCredentials({ access_token: session.accessToken as string })
-
-    const calendar = google.calendar({ version: 'v3', auth })
-
     try {
-      const response = await calendar.events.insert({
-        calendarId: 'primary',
-        requestBody: eventDetails
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventDetails),
       })
 
-      return response.data
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create calendar event')
+      }
+
+      return await response.json()
     } catch (error) {
       console.error('Error creating calendar event:', error)
       throw error
@@ -58,6 +59,6 @@ export const useGoogleCalendar = () => {
   return {
     getCalendarEvents,
     createEvent,
-    isAuthenticated: !!session?.accessToken
+    isAuthenticated: !!session
   }
 }
