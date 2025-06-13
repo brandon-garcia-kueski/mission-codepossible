@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
@@ -82,7 +82,7 @@ export default function Dashboard() {
                 {session.user?.name || session.user?.email}
               </span>
               <button
-                onClick={() => router.push('/')}
+                onClick={() => signOut({ callbackUrl: '/' })}
                 className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20"
               >
                 Salir
