@@ -289,6 +289,8 @@ export default function SchedulePage() {
                   <p className="text-white/70 text-sm mb-3">
                     Los asistentes <strong>requeridos</strong> deben estar disponibles para que el horario sea válido. 
                     Los asistentes <strong>opcionales</strong> se incluirán en la invitación pero no bloquearán horarios si están ocupados.
+                    <br />
+                    <span className="text-yellow-300">🌍 Puedes seleccionar la zona horaria de cada asistente para una mejor coordinación.</span>
                   </p>
                   <AttendeeInput
                     attendees={formData.attendees}
@@ -429,6 +431,7 @@ export default function SchedulePage() {
                   slots={availableSlots}
                   onSlotSelect={handleSlotSelect}
                   loading={checkingAvailability}
+                  attendees={formData.attendees}
                 />
                 
                 {selectedSlot && (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useGoogleContacts, Contact } from '@/hooks/useGoogleContacts'
 import ContactAvatar from './ContactAvatar'
+import { COMMON_TIMEZONES, getBrowserTimezone, getTimezoneInfo } from '@/lib/timezone'
 
 interface AttendeeInputProps {
   attendees: Contact[]
@@ -84,7 +85,12 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
   }
 
   const selectContact = (contact: Contact) => {
-    const newAttendees = [...attendees, contact]
+    // Add default timezone if not present
+    const contactWithTimezone = {
+      ...contact,
+      timezone: contact.timezone || getBrowserTimezone()
+    }
+    const newAttendees = [...attendees, contactWithTimezone]
     onAttendeesChange(newAttendees)
     setInputValue('')
     setShowSuggestions(false)
@@ -98,7 +104,8 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
       const manualContact: Contact = {
         id: `manual-${Date.now()}`,
         name: email.split('@')[0],
-        email: email
+        email: email,
+        timezone: getBrowserTimezone() // Default to browser timezone
       }
       selectContact(manualContact)
     }
@@ -113,6 +120,15 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
     const newAttendees = attendees.map(attendee => 
       attendee.email === emailToToggle 
         ? { ...attendee, optional: !attendee.optional }
+        : attendee
+    )
+    onAttendeesChange(newAttendees)
+  }
+
+  const updateTimezone = (emailToUpdate: string, timezone: string) => {
+    const newAttendees = attendees.map(attendee => 
+      attendee.email === emailToUpdate 
+        ? { ...attendee, timezone }
         : attendee
     )
     onAttendeesChange(newAttendees)
@@ -135,73 +151,107 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
     <div className="relative">
       {/* Lista de asistentes seleccionados */}
       {attendees.length > 0 && (
-        <div className="mb-3 space-y-2">
-          {attendees.map((attendee) => (
-            <div
-              key={attendee.email}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
-                attendee.optional 
-                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' 
-                  : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
-              }`}
-            >
-              <div className="flex items-center">
-                {attendee.photo && (
-                  <img
-                    src={attendee.photo}
-                    alt={attendee.name}
-                    className="w-6 h-6 rounded-full mr-3"
-                  />
-                )}
-                <div>
-                  <div className={`font-medium ${
-                    attendee.optional 
-                      ? 'text-amber-800 dark:text-amber-200' 
-                      : 'text-blue-800 dark:text-blue-200'
-                  }`}>
-                    {attendee.name}
-                    {attendee.optional && (
-                      <span className="ml-2 text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-1 rounded-full">
-                        Opcional
-                      </span>
+        <div className="mb-3 space-y-3">
+          {attendees.map((attendee) => {
+            const timezoneInfo = getTimezoneInfo(attendee.timezone || getBrowserTimezone())
+            return (
+              <div
+                key={attendee.email}
+                className={`p-4 rounded-lg border ${
+                  attendee.optional 
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' 
+                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center flex-1">
+                    {attendee.photo && (
+                      <img
+                        src={attendee.photo}
+                        alt={attendee.name}
+                        className="w-8 h-8 rounded-full mr-3"
+                      />
                     )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`font-medium ${
+                          attendee.optional 
+                            ? 'text-amber-800 dark:text-amber-200' 
+                            : 'text-blue-800 dark:text-blue-200'
+                        }`}>
+                          {attendee.name}
+                        </div>
+                        {attendee.optional && (
+                          <span className="text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-1 rounded-full">
+                            Opcional
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-sm mb-2 ${
+                        attendee.optional 
+                          ? 'text-amber-600 dark:text-amber-400' 
+                          : 'text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {attendee.email}
+                      </div>
+                      
+                      {/* Timezone Selection */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">🌍</span>
+                        <select
+                          value={attendee.timezone || getBrowserTimezone()}
+                          onChange={(e) => updateTimezone(attendee.email, e.target.value)}
+                          className={`text-xs px-2 py-1 rounded border ${
+                            attendee.optional
+                              ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-600'
+                              : 'border-blue-300 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-600'
+                          } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                        >
+                          {COMMON_TIMEZONES.map((tz) => (
+                            <option key={tz.value} value={tz.value}>
+                              {tz.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {timezoneInfo && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {timezoneInfo.offset}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className={`text-sm ${
-                    attendee.optional 
-                      ? 'text-amber-600 dark:text-amber-400' 
-                      : 'text-blue-600 dark:text-blue-400'
-                  }`}>
-                    {attendee.email}
+                  
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      type="button"
+                      onClick={() => toggleOptional(attendee.email)}
+                      className={`text-xs px-3 py-1 rounded-full transition-all ${
+                        attendee.optional
+                          ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 hover:bg-amber-300 dark:hover:bg-amber-700'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                      title={attendee.optional ? 'Marcar como requerido' : 'Marcar como opcional'}
+                    >
+                      {attendee.optional ? 'Requerido' : 'Opcional'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeAttendee(attendee.email)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                        attendee.optional
+                          ? 'text-amber-600 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-700'
+                          : 'text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-700'
+                      }`}
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggleOptional(attendee.email)}
-                  className={`text-xs px-3 py-1 rounded-full transition-all ${
-                    attendee.optional
-                      ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 hover:bg-amber-300 dark:hover:bg-amber-700'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                  title={attendee.optional ? 'Marcar como requerido' : 'Marcar como opcional'}
-                >
-                  {attendee.optional ? 'Requerido' : 'Opcional'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeAttendee(attendee.email)}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                    attendee.optional
-                      ? 'text-amber-600 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-700'
-                      : 'text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-700'
-                  }`}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -287,7 +337,7 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
       </div>
 
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Busca contactos de Google o escribe emails separados por Enter. Puedes marcar asistentes como opcionales.
+        Busca contactos de Google o escribe emails separados por Enter. Puedes marcar asistentes como opcionales y seleccionar su zona horaria.
       </p>
     </div>
   )

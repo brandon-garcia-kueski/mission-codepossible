@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { formatTimeInTimezone, formatDateTimeInTimezone, getTimezoneInfo, getBrowserTimezone } from '@/lib/timezone'
+import { Contact } from '@/hooks/useGoogleContacts'
 
 interface TimeSlot {
   start: string
@@ -13,10 +15,27 @@ interface TimeSlotSelectorProps {
   slots: TimeSlot[]
   onSlotSelect: (slot: TimeSlot) => void
   loading?: boolean
+  attendees?: Contact[] // Add attendees to show timezone info
 }
 
-export default function TimeSlotSelector({ slots, onSlotSelect, loading = false }: TimeSlotSelectorProps) {
+export default function TimeSlotSelector({ slots, onSlotSelect, loading = false, attendees = [] }: TimeSlotSelectorProps) {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+
+  // Get unique timezones from attendees
+  const getUniqueTimezones = () => {
+    const timezones = new Set<string>()
+    timezones.add(getBrowserTimezone()) // Always include browser timezone
+    
+    attendees.forEach(attendee => {
+      if (attendee.timezone) {
+        timezones.add(attendee.timezone)
+      }
+    })
+    
+    return Array.from(timezones)
+  }
+
+  const uniqueTimezones = getUniqueTimezones()
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -129,9 +148,9 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 mb-2">
                   <div className="text-base font-medium text-gray-900 dark:text-white">
                     {formatDate(slot.start)}
                   </div>
@@ -139,10 +158,35 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false 
                     {getScoreText(slot.score)}
                   </span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                
+                <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
                   Duración: {formatDuration(slot.start, slot.end)}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-4">
+                
+                {/* Show times in different timezones */}
+                {uniqueTimezones.length > 1 && (
+                  <div className="mb-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Horarios por zona:</div>
+                    <div className="grid grid-cols-1 gap-1">
+                      {uniqueTimezones.map((timezone) => {
+                        const timezoneInfo = getTimezoneInfo(timezone)
+                        const timeRange = `${formatTimeInTimezone(slot.start, timezone)} - ${formatTimeInTimezone(slot.end, timezone)}`
+                        return (
+                          <div key={timezone} className="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                            <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                              {timeRange}
+                            </span>
+                            <span className="text-gray-500">
+                              {timezoneInfo?.label.split(' ')[0] || timezone.split('/')[1]}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-4">
                   <span>
                     {slot.participants.length} participante{slot.participants.length !== 1 ? 's' : ''}
                   </span>
@@ -154,7 +198,7 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false 
                 </div>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 ml-4">
                 {selectedSlot === slot && (
                   <div className="w-5 h-5 text-blue-500">
                     ✓
@@ -188,6 +232,30 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false 
           <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">
             {formatDate(selectedSlot.start)} - {formatDuration(selectedSlot.start, selectedSlot.end)}
           </p>
+          
+          {/* Show selected time in all relevant timezones */}
+          {uniqueTimezones.length > 1 && (
+            <div className="mb-2">
+              <div className="text-xs text-blue-700 dark:text-blue-300 mb-1">Horarios confirmados:</div>
+              <div className="space-y-1">
+                {uniqueTimezones.map((timezone) => {
+                  const timezoneInfo = getTimezoneInfo(timezone)
+                  const timeRange = `${formatTimeInTimezone(selectedSlot.start, timezone)} - ${formatTimeInTimezone(selectedSlot.end, timezone)}`
+                  return (
+                    <div key={timezone} className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                      <span className="font-mono bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
+                        {timeRange}
+                      </span>
+                      <span>
+                        {timezoneInfo?.label || timezone}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          
           {selectedSlot.optionalConflicts !== undefined && selectedSlot.optionalConflicts > 0 && (
             <p className="text-amber-700 dark:text-amber-300 text-xs">
               ⚠️ {selectedSlot.optionalConflicts} asistente{selectedSlot.optionalConflicts !== 1 ? 's' : ''} opcional{selectedSlot.optionalConflicts !== 1 ? 'es' : ''} no podrá{selectedSlot.optionalConflicts !== 1 ? 'n' : ''} asistir en este horario

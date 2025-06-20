@@ -9,6 +9,7 @@ export interface Contact {
   email: string
   photo?: string | null
   optional?: boolean
+  timezone?: string // Add timezone support
 }
 
 export const useGoogleContacts = () => {

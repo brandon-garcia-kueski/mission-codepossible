@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Validate date format
     const timeMinDate = new Date(timeMin)
     const timeMaxDate = new Date(timeMax)
-    
+
     if (isNaN(timeMinDate.getTime()) || isNaN(timeMaxDate.getTime())) {
       return NextResponse.json(
         { error: 'Invalid date format for timeMin or timeMax' },
