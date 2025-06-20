@@ -10,7 +10,10 @@ export default function Dashboard() {
   const router = useRouter()
   const { getCalendarEvents, isAuthenticated } = useGoogleCalendar()
   const [events, setEvents] = useState<any[]>([])
+  const [allEvents, setAllEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchLoading, setSearchLoading] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -25,21 +28,40 @@ export default function Dashboard() {
     }
   }, [session, status, isAuthenticated])
 
-  const loadCalendarEvents = async () => {
+  const loadCalendarEvents = async (query?: string) => {
     try {
-      setLoading(true)
+      const loadingState = query ? setSearchLoading : setLoading
+      loadingState(true)
+      
       const now = new Date()
       const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
       
       const events = await getCalendarEvents(
         now.toISOString(),
-        nextWeek.toISOString()
+        nextWeek.toISOString(),
+        query
       )
-      setEvents(events)
+      
+      if (query) {
+        setEvents(events)
+      } else {
+        setAllEvents(events)
+        setEvents(events)
+      }
     } catch (error) {
       console.error('Error loading calendar events:', error)
     } finally {
-      setLoading(false)
+      const loadingState = query ? setSearchLoading : setLoading
+      loadingState(false)
+    }
+  }
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query)
+    if (query.trim()) {
+      await loadCalendarEvents(query.trim())
+    } else {
+      setEvents(allEvents)
     }
   }
 
@@ -132,7 +154,7 @@ export default function Dashboard() {
                 </button>
                 
                 <button
-                  onClick={loadCalendarEvents}
+                  onClick={() => loadCalendarEvents()}
                   className="w-full text-left p-6 bg-gradient-to-r from-green-500/20 to-teal-500/20 border border-green-300/30 rounded-2xl hover:from-green-500/30 hover:to-teal-500/30 transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-4">
@@ -160,6 +182,35 @@ export default function Dashboard() {
                 </div>
                 Próximos Eventos
               </h2>
+              
+              {/* Search Input */}
+              <div className="mb-6">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Buscar eventos..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="w-full px-4 py-3 pl-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-200"
+                  />
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                    {searchLoading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white/50"></div>
+                    ) : (
+                      <span className="text-white/50 text-lg">🔍</span>
+                    )}
+                  </div>
+                  {searchQuery && (
+                    <button
+                      onClick={() => handleSearch('')}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                    >
+                      <span className="text-lg">✕</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {loading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/50"></div>
@@ -180,8 +231,38 @@ export default function Dashboard() {
                           : 'Todo el día'
                         }
                       </div>
+                      {event.description && (
+                        <div className="text-white/60 mt-2 text-sm">
+                          {event.description.length > 100 
+                            ? `${event.description.substring(0, 100)}...` 
+                            : event.description
+                          }
+                        </div>
+                      )}
                     </div>
                   ))}
+                  {searchQuery && (
+                    <div className="text-center pt-4">
+                      <p className="text-white/60 text-sm">
+                        {events.length} evento{events.length !== 1 ? 's' : ''} encontrado{events.length !== 1 ? 's' : ''} para "{searchQuery}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : searchQuery ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">🔍</span>
+                  </div>
+                  <p className="text-white/70 text-lg">
+                    No se encontraron eventos para "{searchQuery}".
+                  </p>
+                  <button
+                    onClick={() => handleSearch('')}
+                    className="mt-4 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200"
+                  >
+                    Mostrar todos los eventos
+                  </button>
                 </div>
               ) : (
                 <div className="text-center py-8">

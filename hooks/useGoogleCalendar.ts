@@ -5,13 +5,22 @@ import { useSession } from 'next-auth/react'
 export const useGoogleCalendar = () => {
   const { data: session } = useSession()
 
-  const getCalendarEvents = async (timeMin: string, timeMax: string) => {
+  const getCalendarEvents = async (timeMin: string, timeMax: string, searchQuery?: string) => {
     if (!session) {
       throw new Error('No session available')
     }
 
     try {
-      const response = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`, {
+      const params = new URLSearchParams({
+        timeMin,
+        timeMax
+      })
+
+      if (searchQuery && searchQuery.trim()) {
+        params.append('q', searchQuery.trim())
+      }
+
+      const response = await fetch(`/api/calendar/events?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

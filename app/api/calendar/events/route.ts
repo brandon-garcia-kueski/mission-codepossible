@@ -17,10 +17,29 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timeMin = searchParams.get('timeMin')
     const timeMax = searchParams.get('timeMax')
+    const searchQuery = searchParams.get('q')
+
+    console.log('API Request params:', {
+      timeMin,
+      timeMax,
+      searchQuery,
+      url: request.url
+    })
 
     if (!timeMin || !timeMax) {
       return NextResponse.json(
         { error: 'timeMin and timeMax are required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate date format
+    const timeMinDate = new Date(timeMin)
+    const timeMaxDate = new Date(timeMax)
+    
+    if (isNaN(timeMinDate.getTime()) || isNaN(timeMaxDate.getTime())) {
+      return NextResponse.json(
+        { error: 'Invalid date format for timeMin or timeMax' },
         { status: 400 }
       )
     }
@@ -30,19 +49,34 @@ export async function GET(request: NextRequest) {
 
     const calendar = google.calendar({ version: 'v3', auth })
 
-    const response = await calendar.events.list({
+    const requestParams: any = {
       calendarId: 'primary',
       timeMin,
       timeMax,
       singleEvents: true,
       orderBy: 'startTime'
-    })
+    }
+
+    // Add search query if provided
+    if (searchQuery && searchQuery.trim()) {
+      requestParams.q = searchQuery.trim()
+    }
+
+    console.log('Google Calendar API request params:', requestParams)
+
+    const response = await calendar.events.list(requestParams)
 
     return NextResponse.json(response.data.items || [])
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching calendar events:', error)
+    console.error('Error details:', {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      response: error.response?.data
+    })
     return NextResponse.json(
-      { error: 'Failed to fetch calendar events' },
+      { error: 'Failed to fetch calendar events', details: error.message },
       { status: 500 }
     )
   }
