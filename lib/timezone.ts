@@ -38,7 +38,7 @@ export const getBrowserTimezone = (): string => {
 export const getTimezoneInfo = (timezone: string): TimezoneInfo | null => {
   const info = COMMON_TIMEZONES.find(tz => tz.value === timezone)
   if (info) return info
-  
+
   // If not in common list, try to create a basic one
   try {
     const now = new Date()
@@ -59,7 +59,7 @@ export const getTimezoneInfo = (timezone: string): TimezoneInfo | null => {
  */
 export const formatTimeInTimezone = (date: Date | string, timezone: string): string => {
   const d = typeof date === 'string' ? new Date(date) : date
-  
+
   try {
     return d.toLocaleTimeString('es-ES', {
       timeZone: timezone,
@@ -82,7 +82,7 @@ export const formatTimeInTimezone = (date: Date | string, timezone: string): str
  */
 export const formatDateTimeInTimezone = (date: Date | string, timezone: string): string => {
   const d = typeof date === 'string' ? new Date(date) : date
-  
+
   try {
     return d.toLocaleString('es-ES', {
       timeZone: timezone,

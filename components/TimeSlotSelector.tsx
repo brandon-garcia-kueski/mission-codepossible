@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { formatTimeInTimezone, formatDateTimeInTimezone, getTimezoneInfo, getBrowserTimezone } from '@/lib/timezone'
 import { Contact } from '@/hooks/useGoogleContacts'
+import AttendanceSummary from './AttendanceSummary'
 
 interface TimeSlot {
   start: string
@@ -16,9 +17,10 @@ interface TimeSlotSelectorProps {
   onSlotSelect: (slot: TimeSlot) => void
   loading?: boolean
   attendees?: Contact[] // Add attendees to show timezone info
+  organizerEmail?: string // Add organizer email for attendance summary
 }
 
-export default function TimeSlotSelector({ slots, onSlotSelect, loading = false, attendees = [] }: TimeSlotSelectorProps) {
+export default function TimeSlotSelector({ slots, onSlotSelect, loading = false, attendees = [], organizerEmail }: TimeSlotSelectorProps) {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
 
   // Get unique timezones from attendees
@@ -185,6 +187,44 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false,
                     </div>
                   </div>
                 )}
+
+                {/* Quick attendance summary */}
+                {attendees.length > 0 && slot.availableParticipants && (
+                  <div className="mb-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Disponibilidad:</div>
+                    {(() => {
+                      const availableCount = slot.availableParticipants.filter(email => 
+                        attendees.some(a => a.email === email) || email === organizerEmail
+                      ).length
+                      const totalRequired = attendees.filter(a => !a.optional).length + (organizerEmail ? 1 : 0)
+                      const availableRequired = slot.availableParticipants.filter(email => {
+                        if (email === organizerEmail) return true
+                        const attendee = attendees.find(a => a.email === email)
+                        return attendee && !attendee.optional
+                      }).length
+                      const totalCount = attendees.length + (organizerEmail ? 1 : 0)
+                      
+                      return (
+                        <div className="flex items-center gap-3 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="text-green-600 dark:text-green-400">✓</span>
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {availableCount}/{totalCount} total
+                            </span>
+                          </div>
+                          {availableRequired < totalRequired && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-red-500">!</span>
+                              <span className="text-red-600 dark:text-red-400">
+                                {totalRequired - availableRequired} requerido{totalRequired - availableRequired !== 1 ? 's' : ''} ocupado{totalRequired - availableRequired !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
                 
                 <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-4">
                   <span>
@@ -225,42 +265,51 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false,
       </div>
 
       {selectedSlot && (
-        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-            Horario seleccionado
-          </h4>
-          <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">
-            {formatDate(selectedSlot.start)} - {formatDuration(selectedSlot.start, selectedSlot.end)}
-          </p>
-          
-          {/* Show selected time in all relevant timezones */}
-          {uniqueTimezones.length > 1 && (
-            <div className="mb-2">
-              <div className="text-xs text-blue-700 dark:text-blue-300 mb-1">Horarios confirmados:</div>
-              <div className="space-y-1">
-                {uniqueTimezones.map((timezone) => {
-                  const timezoneInfo = getTimezoneInfo(timezone)
-                  const timeRange = `${formatTimeInTimezone(selectedSlot.start, timezone)} - ${formatTimeInTimezone(selectedSlot.end, timezone)}`
-                  return (
-                    <div key={timezone} className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                      <span className="font-mono bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
-                        {timeRange}
-                      </span>
-                      <span>
-                        {timezoneInfo?.label || timezone}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          
-          {selectedSlot.optionalConflicts !== undefined && selectedSlot.optionalConflicts > 0 && (
-            <p className="text-amber-700 dark:text-amber-300 text-xs">
-              ⚠️ {selectedSlot.optionalConflicts} asistente{selectedSlot.optionalConflicts !== 1 ? 's' : ''} opcional{selectedSlot.optionalConflicts !== 1 ? 'es' : ''} no podrá{selectedSlot.optionalConflicts !== 1 ? 'n' : ''} asistir en este horario
+        <div className="mt-4 space-y-4">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+              Horario seleccionado
+            </h4>
+            <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">
+              {formatDate(selectedSlot.start)} - {formatDuration(selectedSlot.start, selectedSlot.end)}
             </p>
-          )}
+            
+            {/* Show selected time in all relevant timezones */}
+            {uniqueTimezones.length > 1 && (
+              <div className="mb-2">
+                <div className="text-xs text-blue-700 dark:text-blue-300 mb-1">Horarios confirmados:</div>
+                <div className="space-y-1">
+                  {uniqueTimezones.map((timezone) => {
+                    const timezoneInfo = getTimezoneInfo(timezone)
+                    const timeRange = `${formatTimeInTimezone(selectedSlot.start, timezone)} - ${formatTimeInTimezone(selectedSlot.end, timezone)}`
+                    return (
+                      <div key={timezone} className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                        <span className="font-mono bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
+                          {timeRange}
+                        </span>
+                        <span>
+                          {timezoneInfo?.label || timezone}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {selectedSlot.optionalConflicts !== undefined && selectedSlot.optionalConflicts > 0 && (
+              <p className="text-amber-700 dark:text-amber-300 text-xs">
+                ⚠️ {selectedSlot.optionalConflicts} asistente{selectedSlot.optionalConflicts !== 1 ? 's' : ''} opcional{selectedSlot.optionalConflicts !== 1 ? 'es' : ''} no podrá{selectedSlot.optionalConflicts !== 1 ? 'n' : ''} asistir en este horario
+              </p>
+            )}
+          </div>
+
+          {/* Attendance Summary */}
+          <AttendanceSummary 
+            slot={selectedSlot} 
+            attendees={attendees} 
+            organizerEmail={organizerEmail}
+          />
         </div>
       )}
     </div>

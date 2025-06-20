@@ -432,6 +432,7 @@ export default function SchedulePage() {
                   onSlotSelect={handleSlotSelect}
                   loading={checkingAvailability}
                   attendees={formData.attendees}
+                  organizerEmail={session?.user?.email || undefined}
                 />
                 
                 {selectedSlot && (
