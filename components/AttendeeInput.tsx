@@ -109,6 +109,15 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
     onAttendeesChange(newAttendees)
   }
 
+  const toggleOptional = (emailToToggle: string) => {
+    const newAttendees = attendees.map(attendee => 
+      attendee.email === emailToToggle 
+        ? { ...attendee, optional: !attendee.optional }
+        : attendee
+    )
+    onAttendeesChange(newAttendees)
+  }
+
   const handleInputBlur = () => {
     // Usar setTimeout para permitir que el click en sugerencias funcione
     setTimeout(() => {
@@ -126,29 +135,71 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
     <div className="relative">
       {/* Lista de asistentes seleccionados */}
       {attendees.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-3 space-y-2">
           {attendees.map((attendee) => (
             <div
               key={attendee.email}
-              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm"
+              className={`flex items-center justify-between p-3 rounded-lg border ${
+                attendee.optional 
+                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' 
+                  : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+              }`}
             >
-              {attendee.photo && (
-                <img
-                  src={attendee.photo}
-                  alt={attendee.name}
-                  className="w-5 h-5 rounded-full mr-2"
-                />
-              )}
-              <span className="mr-2">
-                {attendee.name} ({attendee.email})
-              </span>
-              <button
-                type="button"
-                onClick={() => removeAttendee(attendee.email)}
-                className="text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100 font-semibold"
-              >
-                ×
-              </button>
+              <div className="flex items-center">
+                {attendee.photo && (
+                  <img
+                    src={attendee.photo}
+                    alt={attendee.name}
+                    className="w-6 h-6 rounded-full mr-3"
+                  />
+                )}
+                <div>
+                  <div className={`font-medium ${
+                    attendee.optional 
+                      ? 'text-amber-800 dark:text-amber-200' 
+                      : 'text-blue-800 dark:text-blue-200'
+                  }`}>
+                    {attendee.name}
+                    {attendee.optional && (
+                      <span className="ml-2 text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-1 rounded-full">
+                        Opcional
+                      </span>
+                    )}
+                  </div>
+                  <div className={`text-sm ${
+                    attendee.optional 
+                      ? 'text-amber-600 dark:text-amber-400' 
+                      : 'text-blue-600 dark:text-blue-400'
+                  }`}>
+                    {attendee.email}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleOptional(attendee.email)}
+                  className={`text-xs px-3 py-1 rounded-full transition-all ${
+                    attendee.optional
+                      ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 hover:bg-amber-300 dark:hover:bg-amber-700'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                  title={attendee.optional ? 'Marcar como requerido' : 'Marcar como opcional'}
+                >
+                  {attendee.optional ? 'Requerido' : 'Opcional'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeAttendee(attendee.email)}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                    attendee.optional
+                      ? 'text-amber-600 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-700'
+                      : 'text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-700'
+                  }`}
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -236,7 +287,7 @@ export default function AttendeeInput({ attendees, onAttendeesChange, placeholde
       </div>
 
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Busca contactos de Google o escribe emails separados por Enter
+        Busca contactos de Google o escribe emails separados por Enter. Puedes marcar asistentes como opcionales.
       </p>
     </div>
   )

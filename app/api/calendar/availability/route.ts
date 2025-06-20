@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
     // Incluir el calendario del usuario autenticado
     const allEmails = [session.user?.email, ...attendees.map((a: any) => a.email)].filter(Boolean)
 
-    for (const email of allEmails) {
+    for (const attendeeData of [{ email: session.user?.email, optional: false }, ...attendees]) {
+      const email = attendeeData.email
+      if (!email) continue
+
       try {
         const response = await calendar.freebusy.query({
           requestBody: {
@@ -48,14 +51,16 @@ export async function POST(request: NextRequest) {
         const busyForUser = response.data.calendars?.[email]?.busy || []
         busyTimes.push({
           email,
-          busy: busyForUser
+          busy: busyForUser,
+          optional: attendeeData.optional || false
         })
       } catch (error) {
         console.error(`Error checking availability for ${email}:`, error)
         // Si no podemos acceder al calendario de un usuario externo, asumimos que está libre
         busyTimes.push({
           email,
-          busy: []
+          busy: [],
+          optional: attendeeData.optional || false
         })
       }
     }
@@ -140,8 +145,8 @@ function generateDaySlots(
 
       if (isToday && slotStart <= minimumStartTime) continue
 
-      // Verificar si hay conflictos
-      const hasConflict = busyTimes.some(userBusy =>
+      // Verificar si hay conflictos con asistentes requeridos
+      const hasRequiredConflict = busyTimes.filter(userBusy => !userBusy.optional).some(userBusy =>
         userBusy.busy.some((busy: any) => {
           const busyStart = new Date(busy.start)
           const busyEnd = new Date(busy.end)
@@ -154,15 +159,48 @@ function generateDaySlots(
         })
       )
 
-      if (!hasConflict) {
-        // Calcular puntuación basada en preferencias (mañana mejor que tarde)
-        const score = calculateSlotScore(slotStart)
+      // Contar conflictos con asistentes opcionales para ajustar la puntuación
+      const optionalConflicts = busyTimes.filter(userBusy => userBusy.optional).filter(userBusy =>
+        userBusy.busy.some((busy: any) => {
+          const busyStart = new Date(busy.start)
+          const busyEnd = new Date(busy.end)
+
+          return (
+            (slotStart >= busyStart && slotStart < busyEnd) ||
+            (slotEnd > busyStart && slotEnd <= busyEnd) ||
+            (slotStart <= busyStart && slotEnd >= busyEnd)
+          )
+        })
+      ).length
+
+      if (!hasRequiredConflict) {
+        // Calcular puntuación basada en preferencias y conflictos opcionales
+        const baseScore = calculateSlotScore(slotStart)
+        // Reducir puntuación por cada conflicto opcional (pero no bloquear el slot)
+        const score = Math.max(baseScore - (optionalConflicts * 15), 10)
+
+        // Calcular lista de participantes disponibles
+        const availableParticipants = busyTimes.filter(userBusy => {
+          const hasConflict = userBusy.busy.some((busy: any) => {
+            const busyStart = new Date(busy.start)
+            const busyEnd = new Date(busy.end)
+
+            return (
+              (slotStart >= busyStart && slotStart < busyEnd) ||
+              (slotEnd > busyStart && slotEnd <= busyEnd) ||
+              (slotStart <= busyStart && slotEnd >= busyEnd)
+            )
+          })
+          return !hasConflict
+        }).map(bt => bt.email)
 
         slots.push({
           start: slotStart.toISOString(),
           end: slotEnd.toISOString(),
           score,
-          participants: busyTimes.map(bt => bt.email)
+          participants: busyTimes.map(bt => bt.email),
+          availableParticipants,
+          optionalConflicts
         })
       }
     }

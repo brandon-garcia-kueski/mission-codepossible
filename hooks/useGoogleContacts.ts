@@ -8,6 +8,7 @@ export interface Contact {
   name: string
   email: string
   photo?: string | null
+  optional?: boolean
 }
 
 export const useGoogleContacts = () => {

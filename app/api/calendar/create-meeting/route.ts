@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
       },
       attendees: attendees.map((attendee: any) => ({
         email: attendee.email,
-        displayName: attendee.name || attendee.email
+        displayName: attendee.name || attendee.email,
+        optional: attendee.optional || false
       })),
       reminders: {
         useDefault: false,

@@ -73,9 +73,10 @@ export default function SchedulePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validar que haya al menos un asistente
-    if (formData.attendees.length === 0) {
-      setErrorMessage('Por favor, agrega al menos un asistente.')
+    // Validar que haya al menos un asistente requerido
+    const requiredAttendees = formData.attendees.filter(attendee => !attendee.optional)
+    if (requiredAttendees.length === 0) {
+      setErrorMessage('Por favor, agrega al menos un asistente requerido.')
       return
     }
 
@@ -282,9 +283,13 @@ export default function SchedulePage() {
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Asistentes */}
                 <div>
-                  <label className="block text-lg font-semibold text-white mb-3">
+                  <label className="block text-lg font-semibold text-white mb-2">
                     Asistentes *
                   </label>
+                  <p className="text-white/70 text-sm mb-3">
+                    Los asistentes <strong>requeridos</strong> deben estar disponibles para que el horario sea válido. 
+                    Los asistentes <strong>opcionales</strong> se incluirán en la invitación pero no bloquearán horarios si están ocupados.
+                  </p>
                   <AttendeeInput
                     attendees={formData.attendees}
                     onAttendeesChange={handleAttendeesChange}

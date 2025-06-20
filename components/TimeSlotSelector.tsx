@@ -5,6 +5,8 @@ interface TimeSlot {
   end: string
   score: number
   participants: string[]
+  availableParticipants?: string[]
+  optionalConflicts?: number
 }
 
 interface TimeSlotSelectorProps {
@@ -140,8 +142,15 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false 
                 <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                   Duración: {formatDuration(slot.start, slot.end)}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {slot.participants.length} participante{slot.participants.length !== 1 ? 's' : ''}
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-4">
+                  <span>
+                    {slot.participants.length} participante{slot.participants.length !== 1 ? 's' : ''}
+                  </span>
+                  {slot.optionalConflicts !== undefined && slot.optionalConflicts > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      {slot.optionalConflicts} opcional{slot.optionalConflicts !== 1 ? 'es' : ''} ocupado{slot.optionalConflicts !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
               </div>
               
@@ -176,9 +185,14 @@ export default function TimeSlotSelector({ slots, onSlotSelect, loading = false 
           <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
             Horario seleccionado
           </h4>
-          <p className="text-blue-800 dark:text-blue-200 text-sm">
+          <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">
             {formatDate(selectedSlot.start)} - {formatDuration(selectedSlot.start, selectedSlot.end)}
           </p>
+          {selectedSlot.optionalConflicts !== undefined && selectedSlot.optionalConflicts > 0 && (
+            <p className="text-amber-700 dark:text-amber-300 text-xs">
+              ⚠️ {selectedSlot.optionalConflicts} asistente{selectedSlot.optionalConflicts !== 1 ? 's' : ''} opcional{selectedSlot.optionalConflicts !== 1 ? 'es' : ''} no podrá{selectedSlot.optionalConflicts !== 1 ? 'n' : ''} asistir en este horario
+            </p>
+          )}
         </div>
       )}
     </div>
