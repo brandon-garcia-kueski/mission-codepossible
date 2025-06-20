@@ -16,25 +16,37 @@ export default function Navigation() {
               <img src="https://cdn.prod.website-files.com/642533e2943fc871d1dc670d/642d4d9f4b2a5abd56c16739_Logo.svg" alt="" />
               <span>Meeting Scheduler</span>
             </Link>
-            
+
             {session && (
               <div className="hidden md:flex space-x-4">
-                <Link 
-                  href="/dashboard" 
+                <Link
+                  href="/dashboard"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Dashboard
                 </Link>
-                <Link 
-                  href="/schedule" 
+                <Link
+                  href="/schedule"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Programar Reunión
                 </Link>
+                <Link
+                  href="/preferences"
+                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Preferencias
+                </Link>
+                <Link
+                  href="/test-blocked-slots"
+                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium text-xs bg-blue-100 dark:bg-blue-900"
+                >
+                  Test
+                </Link>
               </div>
             )}
           </div>
-          
+
           <AuthButton />
         </div>
       </div>

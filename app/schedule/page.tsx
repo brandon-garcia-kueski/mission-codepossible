@@ -3,23 +3,26 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import AttendeeInput from '@/components/AttendeeInput'
 import TimeSlotSelector from '@/components/TimeSlotSelector'
 import { Contact } from '@/hooks/useGoogleContacts'
 import { useMeetingScheduler } from '@/hooks/useMeetingScheduler'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 export default function SchedulePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const { 
-    loading, 
-    availableSlots, 
-    checkingAvailability, 
-    checkAvailability, 
-    createMeeting, 
-    clearAvailableSlots 
+  const { preferences } = useUserPreferences()
+  const {
+    loading,
+    availableSlots,
+    checkingAvailability,
+    checkAvailability,
+    createMeeting,
+    clearAvailableSlots
   } = useMeetingScheduler()
-  
+
   const [formData, setFormData] = useState({
     attendees: [] as Contact[],
     title: '',
@@ -37,7 +40,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (status === 'loading') return
-    
+
     if (!session) {
       router.push('/')
       return
@@ -46,7 +49,7 @@ export default function SchedulePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    
+
     if (name === 'startDate' || name === 'endDate') {
       setFormData(prev => ({
         ...prev,
@@ -72,7 +75,7 @@ export default function SchedulePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validar que haya al menos un asistente
     if (formData.attendees.length === 0) {
       setErrorMessage('Por favor, agrega al menos un asistente.')
@@ -83,7 +86,7 @@ export default function SchedulePage() {
     const today = new Date()
     const startDate = new Date(formData.dateRange.startDate)
     const endDate = new Date(formData.dateRange.endDate)
-    
+
     // Resetear las horas para comparar solo fechas
     const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
@@ -92,7 +95,7 @@ export default function SchedulePage() {
       setErrorMessage('La fecha final no puede ser anterior a la fecha inicial.')
       return
     }
-    
+
     setErrorMessage('')
     setSuccessMessage('')
 
@@ -106,7 +109,7 @@ export default function SchedulePage() {
         duration: parseInt(formData.duration),
         description: formData.reason
       })
-      
+
       // Cambiar a la vista de selección de horarios
       setStep('slots')
     } catch (error: any) {
@@ -131,10 +134,10 @@ export default function SchedulePage() {
         duration: parseInt(formData.duration),
         description: formData.reason
       }, selectedSlot)
-      
+
       setSuccessMessage('¡Reunión creada exitosamente! Se han enviado las invitaciones a todos los participantes.')
       setStep('confirmation')
-      
+
       // Limpiar formulario
       setFormData({
         attendees: [],
@@ -187,7 +190,7 @@ export default function SchedulePage() {
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-500/20 to-pink-400/20"></div>
       <div className="absolute top-20 left-10 w-72 h-72 bg-yellow-400/30 rounded-full blur-3xl"></div>
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl"></div>
-      
+
       <div className="relative z-10">
         {/* Header */}
         <header className="w-full px-4 py-6">
@@ -272,6 +275,37 @@ export default function SchedulePage() {
                   <span className="text-white text-lg">⚠</span>
                 </div>
                 <p className="text-white font-medium">{errorMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Preferences Information */}
+          {step === 'form' && preferences && (
+            <div className="mb-8 p-6 bg-blue-500/20 backdrop-blur-sm border border-blue-300/30 rounded-2xl">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-blue-400 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg">ℹ</span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-white font-medium">Tus preferencias de disponibilidad:</h3>
+                  <div className="text-white/80 text-sm space-y-1">
+                    <p>• Horario laboral: {preferences.workingHours.start}:00 - {preferences.workingHours.end}:00</p>
+                    <p>• Días laborales: {Object.entries(preferences.workingDays)
+                      .filter(([_, enabled]) => enabled)
+                      .map(([day, _]) => day.charAt(0).toUpperCase() + day.slice(1, 3))
+                      .join(', ')}</p>
+                    {preferences.blockedDays.length > 0 && (
+                      <p>• Días bloqueados: {preferences.blockedDays.length} día(s) configurado(s)</p>
+                    )}
+                    <p>• Tiempo mínimo de aviso: {preferences.minimumNotice} hora(s)</p>
+                  </div>
+                  <Link
+                    href="/preferences"
+                    className="inline-block text-blue-300 hover:text-blue-200 text-sm underline"
+                  >
+                    Modificar preferencias
+                  </Link>
+                </div>
               </div>
             </div>
           )}
@@ -425,7 +459,7 @@ export default function SchedulePage() {
                   onSlotSelect={handleSlotSelect}
                   loading={checkingAvailability}
                 />
-                
+
                 {selectedSlot && (
                   <div className="mt-8 flex flex-col sm:flex-row justify-end gap-4">
                     <button
