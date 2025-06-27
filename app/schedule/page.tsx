@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import AttendeeInput from '@/components/AttendeeInput'
 import TimeSlotSelector from '@/components/TimeSlotSelector'
+import PastMeetingsModal from '@/components/PastMeetingsModal'
 import { Contact } from '@/hooks/useGoogleContacts'
 import { useMeetingScheduler } from '@/hooks/useMeetingScheduler'
 import { useLLMService } from '@/hooks/useLLMService'
@@ -36,6 +37,7 @@ export default function SchedulePage() {
   const [step, setStep] = useState<'form' | 'slots' | 'confirmation'>('form')
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showPastMeetingsModal, setShowPastMeetingsModal] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -229,13 +231,21 @@ export default function SchedulePage() {
               <span className="text-white/60">|</span>
               <span className="text-white font-medium">Meeting Scheduler</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-white/80 text-sm">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-white/80 text-sm hidden sm:block">
                 {session.user?.name || session.user?.email}
               </span>
               <button
+                onClick={() => setShowPastMeetingsModal(true)}
+                className="px-3 sm:px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 flex items-center gap-2 text-sm sm:text-base"
+              >
+                <span>📊</span>
+                <span className="hidden sm:inline">Reuniones Pasadas</span>
+                <span className="sm:hidden">Pasadas</span>
+              </button>
+              <button
                 onClick={() => router.push('/dashboard')}
-                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20"
+                className="px-3 sm:px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 text-sm sm:text-base"
               >
                 Dashboard
               </button>
@@ -605,6 +615,12 @@ export default function SchedulePage() {
           )}
         </div>
       </div>
+
+      {/* Past Meetings Modal */}
+      <PastMeetingsModal
+        isOpen={showPastMeetingsModal}
+        onClose={() => setShowPastMeetingsModal(false)}
+      />
     </div>
   )
 }
