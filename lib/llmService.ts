@@ -195,6 +195,145 @@ Importante: Solo devuelve el objeto JSON, sin formato markdown ni texto adiciona
       }
     }
   }
+
+  async extractMeetingDataFromChat(userMessage: string, currentData: any = {}): Promise<{
+    extractedData: any
+    missingFields: string[]
+    nextQuestion?: string
+    intent: string
+    confidence: number
+  }> {
+    try {
+      const prompt = `
+Analiza el siguiente mensaje del usuario y extrae información para programar una reunión.
+
+Mensaje del usuario: "${userMessage}"
+
+Datos actuales ya recopilados: ${JSON.stringify(currentData, null, 2)}
+
+Extrae SOLAMENTE la información que esté claramente mencionada en el mensaje del usuario. No asumas datos que no estén explícitos.
+
+Campos posibles a extraer:
+- title: título de la reunión
+- attendees: lista de emails o nombres de personas
+- duration: duración en minutos (30, 60, 90, 120, 180)
+- startDate: fecha de inicio (formato YYYY-MM-DD)
+- endDate: fecha de fin (formato YYYY-MM-DD)
+- description: descripción o propósito de la reunión
+- timezone: zona horaria si se menciona
+
+Campos CRÍTICOS para crear una reunión (solo estos son obligatorios):
+- attendees (al menos 1)
+- startDate (fecha de inicio)
+
+Campos opcionales (usar defaults si no se proporcionan):
+- title: usar "Reunión con [nombres]" si no se especifica
+- duration: usar 60 minutos por defecto
+- endDate: usar startDate si no se especifica
+- description: usar descripción genérica
+
+IMPORTANTE: Si tienes attendees y startDate, considera que tienes suficiente información para programar la reunión. NO pidas todos los campos opcionales.
+
+Determina la intención:
+- schedule_meeting: quiere programar una nueva reunión
+- modify_meeting: quiere modificar una reunión existente
+- cancel_meeting: quiere cancelar una reunión
+- check_availability: solo quiere verificar disponibilidad
+- general_question: pregunta general sobre reuniones
+
+Responde ÚNICAMENTE en formato JSON:
+{
+  "intent": "schedule_meeting",
+  "confidence": 0.95,
+  "extractedData": {
+    // solo campos extraídos del mensaje actual
+  },
+  "missingFields": ["campo1", "campo2"],
+  "nextQuestion": "¿Pregunta específica para el siguiente campo faltante?"
+}
+`
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text()
+
+      // Clean and parse JSON
+      const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim()
+      const parsed = JSON.parse(cleanedText)
+
+      return {
+        extractedData: parsed.extractedData || {},
+        missingFields: parsed.missingFields || [],
+        nextQuestion: parsed.nextQuestion,
+        intent: parsed.intent || 'schedule_meeting',
+        confidence: parsed.confidence || 0.8
+      }
+    } catch (error) {
+      console.error('Error extracting meeting data from chat:', error)
+
+      // Return fallback response
+      return {
+        extractedData: {},
+        missingFields: ['title', 'attendees', 'duration', 'startDate', 'endDate'],
+        intent: 'schedule_meeting',
+        confidence: 0.5
+      }
+    }
+  }
+
+  async generateChatResponse(
+    extractedData: any,
+    missingFields: string[],
+    currentData: any,
+    userMessage: string
+  ): Promise<string> {
+    try {
+      const prompt = `
+El usuario quiere programar una reunión. 
+
+Mensaje del usuario: "${userMessage}"
+Datos extraídos: ${JSON.stringify(extractedData, null, 2)}
+Datos actuales: ${JSON.stringify(currentData, null, 2)}
+Campos faltantes: ${missingFields.join(', ')}
+
+Genera una respuesta natural y amigable en español que:
+1. Confirme los datos que se han extraído correctamente
+2. Si tienes attendees y startDate, ofrece buscar horarios inmediatamente
+3. Solo pregunta por campos CRÍTICOS faltantes (attendees o startDate)
+4. Sea conversacional pero DECISIVA para avanzar rápido
+5. Use emojis apropiados
+6. Sea muy concisa (máximo 1-2 oraciones)
+
+Si tienes attendees y startDate, NO preguntes por título, duración, descripción, etc. Usa defaults y procede.
+
+Si no faltan campos, confirma que tienes toda la información y ofrece buscar horarios disponibles.
+
+Responde ÚNICAMENTE con el texto de la respuesta, sin formato JSON ni markdown.
+`
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text().trim()
+    } catch (error) {
+      console.error('Error generating chat response:', error)
+
+      // Fallback response
+      if (missingFields.length === 0) {
+        return '✅ ¡Perfecto! Tengo toda la información necesaria. ¿Quieres que busque los horarios disponibles para tu reunión?'
+      }
+
+      const fieldTranslations: { [key: string]: string } = {
+        title: '📝 ¿Cuál será el título de tu reunión?',
+        attendees: '👥 ¿Quiénes participarán en la reunión? Puedes darme sus emails.',
+        duration: '⏱️ ¿Cuánto tiempo durará la reunión? (30 min, 1 hora, 2 horas, etc.)',
+        startDate: '📅 ¿Para qué fecha quieres programar la reunión?',
+        endDate: '📅 ¿Hasta qué fecha puedes tener la reunión?'
+      }
+
+      const nextField = missingFields[0]
+      return fieldTranslations[nextField] || '¿Podrías proporcionarme más información?'
+    }
+  }
 }
 
 export const llmService = new LLMService()

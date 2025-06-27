@@ -5,7 +5,7 @@ import { userPreferencesStorage } from '@/lib/preferences-storage'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slotId: string } }
+  { params }: { params: Promise<{ slotId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -17,9 +17,9 @@ export async function DELETE(
       )
     }
 
-    const { slotId } = params
+    const { slotId } = await params
     const existingPreferences = userPreferencesStorage.get(session.user.email)
-    
+
     if (!existingPreferences) {
       return NextResponse.json(
         { error: 'User preferences not found' },
@@ -50,7 +50,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { slotId: string } }
+  { params }: { params: Promise<{ slotId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -62,11 +62,11 @@ export async function PATCH(
       )
     }
 
-    const { slotId } = params
+    const { slotId } = await params
     const { isActive } = await request.json()
-    
+
     const existingPreferences = userPreferencesStorage.get(session.user.email)
-    
+
     if (!existingPreferences) {
       return NextResponse.json(
         { error: 'User preferences not found' },

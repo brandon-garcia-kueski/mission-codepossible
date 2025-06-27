@@ -236,6 +236,14 @@ export default function SchedulePage() {
                 {session.user?.name || session.user?.email}
               </span>
               <button
+                onClick={() => router.push('/chat')}
+                className="px-3 sm:px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 flex items-center gap-2 text-sm sm:text-base"
+              >
+                <span>🤖</span>
+                <span className="hidden sm:inline">Chat IA</span>
+                <span className="sm:hidden">Chat</span>
+              </button>
+              <button
                 onClick={() => setShowPastMeetingsModal(true)}
                 className="px-3 sm:px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20 flex items-center gap-2 text-sm sm:text-base"
               >

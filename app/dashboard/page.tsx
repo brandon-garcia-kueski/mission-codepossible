@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
+import ChatDemoCard from '@/components/ChatDemoCard'
 
 export default function Dashboard() {
   const { data: session, status } = useSession()
@@ -154,6 +155,25 @@ export default function Dashboard() {
                 </button>
                 
                 <button
+                  onClick={() => router.push('/chat')}
+                  className="w-full text-left p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-300/30 rounded-2xl hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <span className="text-2xl">🤖</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white text-lg">
+                        Chat Assistant
+                      </div>
+                      <div className="text-white/70">
+                        Programa reuniones conversando con IA
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <button
                   onClick={() => loadCalendarEvents()}
                   className="w-full text-left p-6 bg-gradient-to-r from-green-500/20 to-teal-500/20 border border-green-300/30 rounded-2xl hover:from-green-500/30 hover:to-teal-500/30 transition-all duration-200 group"
                 >
@@ -172,6 +192,11 @@ export default function Dashboard() {
                   </div>
                 </button>
               </div>
+            </div>
+
+            {/* Chat Demo Card */}
+            <div className="mt-12">
+              <ChatDemoCard />
             </div>
 
             {/* Próximos Eventos */}
