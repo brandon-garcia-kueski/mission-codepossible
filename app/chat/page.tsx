@@ -31,13 +31,13 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-pink-700 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-pink-700 relative">
       {/* Elementos decorativos de fondo */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-500/20 to-pink-400/20"></div>
       <div className="absolute top-20 left-10 w-72 h-72 bg-yellow-400/30 rounded-full blur-3xl"></div>
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl"></div>
       
-      <div className="relative z-10 h-screen flex flex-col">
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
         <header className="w-full px-4 py-6">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
@@ -74,7 +74,7 @@ export default function ChatPage() {
 
         {/* Main Content */}
         <div className="flex-1 max-w-6xl mx-auto w-full px-4 pb-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 h-full flex flex-col">
+          <div className="bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 h-[calc(100vh-120px)] flex flex-col">
             <ChatAssistant />
           </div>
         </div>

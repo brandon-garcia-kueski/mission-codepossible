@@ -1,6 +1,15 @@
 import { Contact } from '@/types/chat'
 
 class ChatMeetingService {
+  private getBaseUrl(): string {
+    // Check if we're in browser environment
+    if (typeof window !== 'undefined') {
+      return ''
+    }
+    // Server-side: use environment variable or fallback
+    return process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  }
+
   async extractMeetingData(userMessage: string, currentData: any = {}): Promise<{
     extractedData: any
     missingFields: string[]
@@ -9,7 +18,8 @@ class ChatMeetingService {
     confidence: number
   }> {
     try {
-      const response = await fetch('/api/llm/extract-meeting-data', {
+      const baseUrl = this.getBaseUrl()
+      const response = await fetch(`${baseUrl}/api/llm/extract-meeting-data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +71,7 @@ class ChatMeetingService {
     }
 
     // Extract dates (enhanced patterns)
-    const today = new Date('2025-06-27') // Use current date from context
+    const today = new Date() // Use actual current date
 
     // Try various date patterns
     if (lowerMessage.includes('mañana') || lowerMessage.includes('tomorrow')) {
@@ -128,7 +138,8 @@ class ChatMeetingService {
     userMessage: string
   ): Promise<string> {
     try {
-      const response = await fetch('/api/llm/generate-chat-response', {
+      const baseUrl = this.getBaseUrl()
+      const response = await fetch(`${baseUrl}/api/llm/generate-chat-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

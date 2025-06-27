@@ -45,10 +45,14 @@ export async function POST(request: NextRequest) {
       if (!email) continue
 
       try {
+        // Create dates in local timezone to avoid UTC conversion issues
+        const startDateLocal = new Date(startDate + 'T00:00:00')
+        const endDateLocal = new Date(endDate + 'T23:59:59')
+
         const response = await calendar.freebusy.query({
           requestBody: {
-            timeMin: new Date(startDate).toISOString(),
-            timeMax: new Date(new Date(endDate).setHours(23, 59, 59)).toISOString(),
+            timeMin: startDateLocal.toISOString(),
+            timeMax: endDateLocal.toISOString(),
             items: [{ id: email }],
             timeZone: 'America/Mexico_City'
           }
@@ -71,10 +75,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate available slots with user preferences
+    // Generate available slots with user preferences - ensure dates are in local timezone
+    const startDateLocal = new Date(startDate + 'T00:00:00')
+    const endDateLocal = new Date(endDate + 'T23:59:59')
+
     const availableSlots = generateAvailableSlots(
-      new Date(startDate),
-      new Date(endDate),
+      startDateLocal,
+      endDateLocal,
       parseInt(duration),
       busyTimes,
       preferences
@@ -107,13 +114,13 @@ function generateAvailableSlots(
 
   while (currentDate <= endDate) {
     const dayOfWeek = currentDate.getDay()
-    
+
     // Check if day is blocked by user preferences
     const isDayBlocked = preferences?.blockedDays.includes(dayOfWeek) || false
-    
+
     // Only weekdays by default, unless user has specific preferences
     const isWorkDay = preferences?.blockedDays ? !isDayBlocked : (dayOfWeek >= 1 && dayOfWeek <= 5)
-    
+
     if (isWorkDay) {
       const daySlots = generateDaySlots(currentDate, workHours, durationMinutes, busyTimes, preferences)
       slots.push(...daySlots)
@@ -285,19 +292,19 @@ function isRecurringSlotBlocked(start: Date, end: Date, blockedSlot: any): boole
     case 'daily':
       const daysDiff = Math.floor((start.getTime() - blockedStart.getTime()) / (1000 * 60 * 60 * 24))
       return daysDiff >= 0 && daysDiff % interval === 0
-    
+
     case 'weekly':
       if (daysOfWeek && !daysOfWeek.includes(start.getDay())) {
         return false
       }
       const weeksDiff = Math.floor((start.getTime() - blockedStart.getTime()) / (1000 * 60 * 60 * 24 * 7))
       return weeksDiff >= 0 && weeksDiff % interval === 0
-    
+
     case 'monthly':
-      const monthsDiff = (start.getFullYear() - blockedStart.getFullYear()) * 12 + 
-                        (start.getMonth() - blockedStart.getMonth())
+      const monthsDiff = (start.getFullYear() - blockedStart.getFullYear()) * 12 +
+        (start.getMonth() - blockedStart.getMonth())
       return monthsDiff >= 0 && monthsDiff % interval === 0
-    
+
     default:
       return false
   }
