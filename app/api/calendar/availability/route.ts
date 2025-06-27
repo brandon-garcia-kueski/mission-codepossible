@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { google } from 'googleapis'
 import { authOptions } from '@/lib/auth'
+import { UserPreferences } from '@/types/calendar'
+import { userPreferencesStorage } from '@/lib/preferences-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +24,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Get user preferences
+    const userEmail = session.user?.email
+    const preferences = userEmail ? userPreferencesStorage.get(userEmail) : null
 
     const auth = new google.auth.OAuth2()
     auth.setCredentials({ access_token: session.accessToken as string })
@@ -65,12 +71,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generar franjas horarias disponibles
+    // Generate available slots with user preferences
     const availableSlots = generateAvailableSlots(
       new Date(startDate),
       new Date(endDate),
       parseInt(duration),
-      busyTimes
+      busyTimes,
+      preferences
     )
 
     return NextResponse.json({
@@ -90,17 +97,25 @@ function generateAvailableSlots(
   startDate: Date,
   endDate: Date,
   durationMinutes: number,
-  busyTimes: any[]
+  busyTimes: any[],
+  preferences?: UserPreferences | null
 ): any[] {
   const slots: any[] = []
-  const workHours = { start: 9, end: 18 } // 9 AM a 6 PM
+  const workHours = preferences?.workingHours || { start: 9, end: 17 } // Use user preferences or default
 
   const currentDate = new Date(startDate)
 
   while (currentDate <= endDate) {
-    // Solo días laborables (lunes a viernes)
-    if (currentDate.getDay() >= 1 && currentDate.getDay() <= 5) {
-      const daySlots = generateDaySlots(currentDate, workHours, durationMinutes, busyTimes)
+    const dayOfWeek = currentDate.getDay()
+    
+    // Check if day is blocked by user preferences
+    const isDayBlocked = preferences?.blockedDays.includes(dayOfWeek) || false
+    
+    // Only weekdays by default, unless user has specific preferences
+    const isWorkDay = preferences?.blockedDays ? !isDayBlocked : (dayOfWeek >= 1 && dayOfWeek <= 5)
+    
+    if (isWorkDay) {
+      const daySlots = generateDaySlots(currentDate, workHours, durationMinutes, busyTimes, preferences)
       slots.push(...daySlots)
     }
 
@@ -119,7 +134,8 @@ function generateDaySlots(
   date: Date,
   workHours: { start: number, end: number },
   durationMinutes: number,
-  busyTimes: any[]
+  busyTimes: any[],
+  preferences?: UserPreferences | null
 ): any[] {
   const slots: any[] = []
   const slotDuration = 30 // Intervalos de 30 minutos
@@ -144,6 +160,11 @@ function generateDaySlots(
       const isToday = slotStart.toDateString() === today.toDateString()
 
       if (isToday && slotStart <= minimumStartTime) continue
+
+      // Check if time slot is blocked by user preferences
+      if (preferences && isTimeSlotBlocked(slotStart, slotEnd, preferences)) {
+        continue
+      }
 
       // Verificar si hay conflictos con asistentes requeridos
       const hasRequiredConflict = busyTimes.filter(userBusy => !userBusy.optional).some(userBusy =>
@@ -222,4 +243,62 @@ function calculateSlotScore(slotStart: Date): number {
   if (hour >= 15 && hour < 18) return 60
 
   return 40
+}
+
+// Helper function to check if a time slot is blocked by user preferences
+function isTimeSlotBlocked(start: Date, end: Date, preferences: UserPreferences): boolean {
+  // Check blocked time slots
+  for (const blockedSlot of preferences.blockedTimeSlots) {
+    if (!blockedSlot.isActive) continue
+
+    const blockedStart = new Date(blockedSlot.start)
+    const blockedEnd = new Date(blockedSlot.end)
+
+    // Check if the time slot overlaps with blocked slot
+    if (start < blockedEnd && end > blockedStart) {
+      return true
+    }
+
+    // Check recurrence if applicable
+    if (blockedSlot.recurrence && isRecurringSlotBlocked(start, end, blockedSlot)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+// Helper function to check recurring blocked slots
+function isRecurringSlotBlocked(start: Date, end: Date, blockedSlot: any): boolean {
+  if (!blockedSlot.recurrence) return false
+
+  const { frequency, interval, endDate, daysOfWeek } = blockedSlot.recurrence
+  const blockedStart = new Date(blockedSlot.start)
+  const recurEndDate = endDate ? new Date(endDate) : null
+
+  // If recurrence has ended, not blocked
+  if (recurEndDate && start > recurEndDate) {
+    return false
+  }
+
+  switch (frequency) {
+    case 'daily':
+      const daysDiff = Math.floor((start.getTime() - blockedStart.getTime()) / (1000 * 60 * 60 * 24))
+      return daysDiff >= 0 && daysDiff % interval === 0
+    
+    case 'weekly':
+      if (daysOfWeek && !daysOfWeek.includes(start.getDay())) {
+        return false
+      }
+      const weeksDiff = Math.floor((start.getTime() - blockedStart.getTime()) / (1000 * 60 * 60 * 24 * 7))
+      return weeksDiff >= 0 && weeksDiff % interval === 0
+    
+    case 'monthly':
+      const monthsDiff = (start.getFullYear() - blockedStart.getFullYear()) * 12 + 
+                        (start.getMonth() - blockedStart.getMonth())
+      return monthsDiff >= 0 && monthsDiff % interval === 0
+    
+    default:
+      return false
+  }
 }
