@@ -7,6 +7,7 @@ import AttendeeInput from '@/components/AttendeeInput'
 import TimeSlotSelector from '@/components/TimeSlotSelector'
 import { Contact } from '@/hooks/useGoogleContacts'
 import { useMeetingScheduler } from '@/hooks/useMeetingScheduler'
+import { useLLMService } from '@/hooks/useLLMService'
 
 export default function SchedulePage() {
   const { data: session, status } = useSession()
@@ -19,6 +20,7 @@ export default function SchedulePage() {
     createMeeting, 
     clearAvailableSlots 
   } = useMeetingScheduler()
+  const { generateMeetingContent, loading: llmLoading } = useLLMService()
   
   const [formData, setFormData] = useState({
     attendees: [] as Contact[],
@@ -170,6 +172,29 @@ export default function SchedulePage() {
     clearAvailableSlots()
   }
 
+  const handleGenerateWithAI = async () => {
+    if (formData.attendees.length === 0) {
+      setErrorMessage('Por favor, agrega al menos un asistente antes de generar contenido con IA.')
+      return
+    }
+
+    try {
+      setErrorMessage('')
+      const result = await generateMeetingContent(formData.attendees)
+      
+      if (result) {
+        setFormData(prev => ({
+          ...prev,
+          title: result.title,
+          reason: result.description
+        }))
+      }
+    } catch (error) {
+      console.error('Error generating AI content:', error)
+      setErrorMessage('Error al generar contenido con IA. Inténtalo de nuevo.')
+    }
+  }
+
   if (status === 'loading') {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -297,6 +322,30 @@ export default function SchedulePage() {
                     onAttendeesChange={handleAttendeesChange}
                     placeholder="Buscar contactos de Google o escribir emails..."
                   />
+                  
+                  {/* AI Generation Button */}
+                  {formData.attendees.length > 0 && (
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleGenerateWithAI}
+                        disabled={llmLoading}
+                        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium flex items-center justify-center gap-2 text-sm"
+                      >
+                        {llmLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Generando con IA...
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-base">✨</span>
+                            Generar título y descripción con IA
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Título de la reunión */}
